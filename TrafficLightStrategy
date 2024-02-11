@@ -1,97 +1,149 @@
-# Import pandas, yfinance and csv libraries
+import yfinance
+import datetime
+import sys
 import pandas as pd
-import yfinance as yf
-import csv
+import argparse
+import time
+import calendar
 
-# Define a function to scan the stock data for a given timeframe
-def scan_stock(stock, timeframe):
-  # Check the timeframe and set the start and end date accordingly
-  if timeframe == 'daily':
-    # Use the last 3 days of data
-    end = pd.to_datetime ('today')
-    start = end - pd.Timedelta (days=3)
-  elif timeframe == 'weekly':
-    # Use the last 3 weeks of data
-    end = pd.to_datetime ('today') - pd.offsets.Week (weekday=4) # Friday
-    start = end - pd.offsets.Week (n=3)
-  elif timeframe == 'monthly':
-    # Use the last 3 months of data
-    end = pd.to_datetime ('today') - pd.offsets.MonthEnd (n=1) # Last day of previous month
-    start = end - pd.offsets.MonthBegin (n=3)
-  else:
-    # Invalid timeframe
-    return None
-  
-  # Download the stock data from yahoo finance
-  data = yf.download(stock, start, end)
-  # Resample the data based on the timeframe
-  data = data.resample (timeframe[0].upper ()).agg ({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
-  # Create a new column for the previous period's close
-  data['PrevClose'] = data['Close'].shift(1)
-  # Create a new column for the previous period's open
-  data['PrevOpen'] = data['Open'].shift(1)
-  # Create a new column for the period before previous period's close
-  data['PrevPrevClose'] = data['Close'].shift(2)
-  # Create a new column for the period before previous period's open
-  data['PrevPrevOpen'] = data['Open'].shift(2)
-  # Create a new column for the first condition
-  data['Condition1'] = (data['PrevPrevClose'] < data['PrevPrevOpen'])
-  # Create a new column for the second condition
-  data['Condition2'] = (data['PrevClose'] > data['PrevOpen']) & (data['Open'] < data['Close']) & (data['Close'] > data['PrevOpen'])
-  # Create a new column for the third condition
-  data['Condition3'] = (data['Close'] > data['PrevPrevOpen'])
-  # Create a new column for the result
-  data['Result'] = data.apply(lambda row: 'TF-long' if row['Condition1'] and row['Condition2'] and row['Condition3'] else 'no signal', axis=1)
-  # Return the last result
-  return data['Result'].iloc [-1]
+# Create an argument parser object
+parser = argparse.ArgumentParser(description='Analyze stock data and apply trading strategy')
 
-# Define the input and output files
-input_file = 'stocks.txt'
-output_file = 'results.csv'
+# Add an optional argument named --timeframe
+parser.add_argument('--timeframe', choices=['daily', 'weekly', 'monthly', 'all', 'weekly-immediate', 'monthly-immediate'], default='all', help='The timeframe to analyze')
 
-# Define the timeframes
-timeframes = ['daily', 'weekly', 'monthly']
+# Parse the arguments and store them in a variable
+args = parser.parse_args()
 
-# Ask the user to enter the desired timeframe
-timeframe = input("Enter the timeframe: ")
+# Access the timeframe argument value
+timeframe = args.timeframe
 
-# Check if the timeframe is valid
-if timeframe not in timeframes and timeframe != 'all':
-  # Invalid timeframe
-  print("Invalid timeframe. Please enter one of the following: daily, weekly, monthly, or all.")
-else:
-  # Open the input file and read the stock symbols
-  with open (input_file, 'r') as infile:
-    stocks = infile.read().splitlines()
+# Read the stock symbols from stocks.txt file
+with open ('stocks.txt', 'r') as f:
+    stocks = f.read ().splitlines ()
 
-  # Open the output file and write the results
-  with open (output_file, 'w', newline='') as outfile:
-    writer = csv.writer (outfile)
-    # Write the header row
-    if timeframe == 'all':
-      # Write all the timeframes
-      writer.writerow (['Stock', 'Daily', 'Weekly', 'Monthly'])
+# Loop through each stock symbol and apply the trading strategy
+for ticker in stocks:
+    # Get the historical data for different timeframes
+    daily_data = yfinance.download (ticker, period='1y')
+    weekly_data = yfinance.download (ticker, period='1y', interval='1wk')
+    monthly_data = yfinance.download (ticker, period='1y', interval='1mo')
+
+    # Get the current date
+    today = datetime.date.today()
+
+    # Get the weekday number of the current date (0 is Monday, 6 is Sunday)
+    weekday = today.weekday()
+
+    # Define the week start and end days (5 is Saturday, 4 is Friday)
+    week_start = 5
+    week_end = 4
+
+    # Calculate the number of days to subtract from the current date to get the start and end dates of the previous 2 weeks
+    start_delta = datetime.timedelta(days=(weekday - week_start) % 7 + 7) # Add 7 days to go back one week
+    end_delta = datetime.timedelta(days=(weekday - week_end) % 7 + 1) # Add 1 day to include the end day
+
+    # Get the start and end dates of the previous 2 weeks
+    start_date = today - start_delta
+    end_date = today - end_delta
+
+    # Get the last 2 weeks data for weekly-immediate timeframe
+    weekly_immediate_data = yfinance.download (ticker, start=start_date, end=end_date)
+
+    # Get the year and month of the current date
+    year = today.year
+    month = today.month
+
+    # Calculate the year and month of the previous 2 months
+    prev_month = month - 1
+    prev_year = year
+    if prev_month == 0: # If the previous month is December of the previous year
+        prev_month = 12
+        prev_year = year - 1
+    prev_prev_month = prev_month - 1
+    prev_prev_year = prev_year
+    if prev_prev_month == 0: # If the month before previous month is December of the previous year
+        prev_prev_month = 12
+        prev_prev_year = prev_year - 1
+
+    # Get the start and end dates of the previous 2 months
+    start_date = datetime.date(prev_prev_year, prev_prev_month, 1) # The first day of the month before previous month
+    end_date = datetime.date(prev_year, prev_month, calendar.monthrange(prev_year, prev_month)[1]) # The last day of the previous month
+
+    # Get the last 2 months data for monthly-immediate timeframe
+    monthly_immediate_data = yfinance.download(ticker, start=start_date, end=end_date)
+
+    # Select the last 3 rows of each dataframe
+    daily_data = daily_data.tail(3)
+    weekly_data = weekly_data.tail(3)
+    monthly_data = monthly_data.tail(3)
+    weekly_immediate_data = weekly_immediate_data.tail(3)
+    monthly_immediate_data = monthly_immediate_data.tail(2)
+
+    # Calculate the TF-long signal for each timeframe
+    # The TF-long signal is True if the following conditions are met:
+    # - The open price of 2 days ago is higher than the close price of 2 days ago
+    # - The open price of yesterday is lower than the close price of yesterday
+    # - The open price of 2 days ago is lower than the close price of today
+    daily_signal = (daily_data.iloc [-3] ['Open'] > daily_data.iloc [-3] ['Close']) and \
+                   (daily_data.iloc [-2] ['Open'] < daily_data.iloc [-2] ['Close']) and \
+                   (daily_data.iloc [-3] ['Open'] < daily_data.iloc [-1] ['Close'])
+    weekly_signal = (weekly_data.iloc [-3] ['Open'] > weekly_data.iloc [-3] ['Close']) and \
+                    (weekly_data.iloc [-2] ['Open'] < weekly_data.iloc [-2] ['Close']) and \
+                    (weekly_data.iloc [-3] ['Open'] < weekly_data.iloc [-1] ['Close'])
+    monthly_signal = (monthly_data.iloc [-3] ['Open'] > monthly_data.iloc [-3] ['Close']) and \
+                     (monthly_data.iloc [-2] ['Open'] < monthly_data.iloc [-2] ['Close']) and \
+                     (monthly_data.iloc [-3] ['Open'] < monthly_data.iloc [-1] ['Close'])
+    # The TF-long signal for weekly-immediate is True if the following conditions are met:
+    # - The current week's close price is higher than the previous week's open price
+    # - The previous week's close price is lower than the previous week's open price
+    weekly_immediate_signal = (weekly_immediate_data.iloc[-1]['Close'] > weekly_immediate_data.iloc[-2]['Open']) and \
+                              (weekly_immediate_data.iloc[-2]['Close'] < weekly_immediate_data.iloc[-2]['Open'])
+    # The TF-long signal for monthly-immediate is True if the following conditions are met:
+    # - The last month's close price is higher than the month before previous month's open price
+    # - The month before previous month's close price is lower than the month before previous month's open price
+    monthly_immediate_signal = (monthly_immediate_data.iloc[-1]['Close'] > monthly_immediate_data.iloc[-2]['Open']) and \
+                               (monthly_immediate_data.iloc[-2]['Close'] < monthly_immediate_data.iloc[-2]['Open'])
+
+    # Filter the data based on the timeframe
+    if timeframe == 'daily':
+        filtered_data = daily_data
+        filtered_signal = daily_signal
+    elif timeframe == 'weekly':
+        filtered_data = weekly_data
+        filtered_signal = weekly_signal
+    elif timeframe == 'monthly':
+        filtered_data = monthly_data
+        filtered_signal = monthly_signal
+    elif timeframe == 'all':
+        filtered_data = pd.concat([daily_data, weekly_data, monthly_data, weekly_immediate_data, monthly_immediate_data]) # Concatenate all dataframes
+        filtered_signal = None # No single signal for all timeframes
+    elif timeframe == 'weekly-immediate':
+        filtered_data = weekly_immediate_data
+        filtered_signal = weekly_immediate_signal
+    elif timeframe == 'monthly-immediate':
+        filtered_data = monthly_immediate_data
+        filtered_signal = monthly_immediate_signal
     else:
-      # Write only the selected timeframe
-      writer.writerow (['Stock', timeframe.capitalize()])
-    # Loop through the stocks
-    for stock in stocks:
-      # Get the stock symbol
-      symbol = stock
-      # Create an empty list to store the results
-      results = [symbol]
-      # Check if the user wants all the timeframes
-      if timeframe == 'all':
-        # Loop through all the timeframes
-        for tf in timeframes:
-          # Scan the stock data for the given timeframe
-          result = scan_stock (symbol, tf)
-          # Append the result to the list
-          results.append (result)
-      else:
-        # Scan the stock data for the selected timeframe
-        result = scan_stock (symbol, timeframe)
-        # Append the result to the list
-        results.append (result)
-      # Write the results to the output file
-      writer.writerow (results)
+        print('Invalid timeframe')
+        sys.exit()
+
+    # Create a new dataframe with the stock name and the signal columns
+    output_data = pd.DataFrame()
+    output_data['stock name'] = ticker # Add the stock name column
+    output_data['TF-long signal'] = filtered_signal # Add the filtered signal column based on the timeframe
+
+    # Print the TF-long signal for each timeframe
+    print ('Daily TF-long signal:', daily_signal)
+    print ('Weekly TF-long signal:', weekly_signal)
+    print ('Monthly TF-long signal:', monthly_signal)
+    print ('Weekly-immediate TF-long signal:', weekly_immediate_signal)
+    print ('Monthly-immediate TF-long signal:', monthly_immediate_signal)
+
+    # Get the current date and time in the format DD-MM-HH-Mins
+    timestamp = time.strftime("%d-%m-%H-%M")
+    # Append the timestamp to the file name
+    file_name = 'results-' + timestamp + '.csv'
+
+    # Save the output to a csv file
+    output_data.to_csv(file_name, index=None)

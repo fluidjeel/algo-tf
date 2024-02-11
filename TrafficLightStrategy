@@ -141,8 +141,5 @@ for ticker in stocks:
     print ('Weekly-immediate TF-long signal:', weekly_immediate_signal)
     print ('Monthly-immediate TF-long signal:', monthly_immediate_signal)
 
-# Convert the output data list into a pandas DataFrame with the appropriate column names
-output_data = pd.DataFrame(output_data, columns=['stock name', 'daily signal', 'weekly signal', 'monthly signal', 'weekly-immediate signal', 'monthly-immediate signal'])
-
-# Save the output to a csv file
-output_data.to_csv('results.csv', index=None)
+    # Print the stock name
+    print('Stock name:', ticker) # Line 113

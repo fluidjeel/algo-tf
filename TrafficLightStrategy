@@ -22,6 +22,9 @@ timeframe = args.timeframe
 with open ('stocks.txt', 'r') as f:
     stocks = f.read ().splitlines ()
 
+# Create an empty list to store the output data
+output_data = []
+
 # Loop through each stock symbol and apply the trading strategy
 for ticker in stocks:
     # Get the historical data for different timeframes
@@ -128,10 +131,8 @@ for ticker in stocks:
         print('Invalid timeframe')
         sys.exit()
 
-    # Create a new dataframe with the stock name and the signal columns
-    output_data = pd.DataFrame()
-    output_data['stock name'] = ticker # Add the stock name column
-    output_data['TF-long signal'] = filtered_signal # Add the filtered signal column based on the timeframe
+    # Append a list containing the stock name and the TF-long status for each timeframe to the output data list
+    output_data.append([ticker, daily_signal, weekly_signal, monthly_signal, weekly_immediate_signal, monthly_immediate_signal])
 
     # Print the TF-long signal for each timeframe
     print ('Daily TF-long signal:', daily_signal)
@@ -140,10 +141,8 @@ for ticker in stocks:
     print ('Weekly-immediate TF-long signal:', weekly_immediate_signal)
     print ('Monthly-immediate TF-long signal:', monthly_immediate_signal)
 
-    # Get the current date and time in the format DD-MM-HH-Mins
-    timestamp = time.strftime("%d-%m-%H-%M")
-    # Append the timestamp to the file name
-    file_name = 'results-' + timestamp + '.csv'
+# Convert the output data list into a pandas DataFrame with the appropriate column names
+output_data = pd.DataFrame(output_data, columns=['stock name', 'daily signal', 'weekly signal', 'monthly signal', 'weekly-immediate signal', 'monthly-immediate signal'])
 
-    # Save the output to a csv file
-    output_data.to_csv(file_name, index=None)
+# Save the output to a csv file
+output_data.to_csv('results.csv', index=None)

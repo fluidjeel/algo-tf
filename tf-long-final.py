@@ -4,6 +4,21 @@ import yfinance as yf
 import os
 import time
 
+import os
+import shutil
+
+def remove_directory_recursively(directory_path):
+    try:
+        shutil.rmtree(directory_path)
+        print(f"Directory '{directory_path}' and its contents have been removed successfully.")
+    except Exception as e:
+        print(f"Error deleting directory: {e}")
+
+if __name__ == "__main__":
+    directories_to_remove = ["stocks-bse-output", "stocks-output"]
+    for directory in directories_to_remove:
+        remove_directory_recursively(directory)
+
 # Get the script start time in the required format
 start_time = time.strftime('%Y-%m-%d-%H-%M')
 
@@ -37,17 +52,17 @@ def process_stock(input_file, output_folder):
             data = yf.download(stock, period='3mo')
             
             # Calculate the daily condition
-            daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2])
+            daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2]) and (data['Close'].iloc[-1] > data['Open'].iloc[-1])
             # Assign the daily signal based on the condition
             daily_signal = 'TF-long' if daily_condition else 'no-signal'
             
             # Calculate the weekly condition
-            weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
+            weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2]) and (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-1])
             # Assign the weekly signal based on the condition
             weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
             
             # Calculate the monthly condition
-            monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
+            monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2]) and (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-1])
             # Assign the monthly signal based on the condition
             monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
             

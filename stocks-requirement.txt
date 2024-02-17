@@ -1,0 +1,9 @@
+create a python script based on data available from yahoo finance. It basically parses a list of stocks available in a file called stocks.txt which has list of stocks seperated by newline. The script has 5 conditions to be checked which are as follows
+
+1. Daily - if todays close higher is than 2 days ago open price and  2 days ago open price is higher than 2 days ago close price also  one day ago open price is lower than 1 day ago close price. If the condition is met, then print "TF-long" else print "no -signal" in the outputfile.
+2. Weekly -  if this week close is higher than 2 weeks ago open price and 2 weeks open price is higher than 2 weeks close price also, one week open price is lower than 1 week close price. If the condition is met, then print "TF-long" else print "no -signal" in the outputfile.
+3. Monthly-  if this month close is higher than 2 months ago open price and 2 months open price is higher than 2 months close price. The one month open price should be lower than 1 month close price. If the condition is met, then print "TF-long" else print "no -signal" in the outputfile.
+4. Weekly-immediate  -  if this week close is higher than previous week open price and previous week open price is higher than previous weeks close price. If the condition is met, then print "TF-long" else print "no -signal" in the outputfile.
+5. Monthly-immediate  -  if this month close is higher than previous month open price. The previous month open price should be higher than previous month close price. If the condition is met, then print "TF-long" else print "no -signal" in the outputfile.
+
+Output should be dumped in a timestamped file in following format result-DD-MM-HH:Mins

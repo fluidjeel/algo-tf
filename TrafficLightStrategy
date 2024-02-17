@@ -1,14 +1,13 @@
-# Import pandas and yfinance libraries
+# Import pandas, yfinance, and os libraries
 import pandas as pd
 import yfinance as yf
-import time
 import os
+import time
 
 # Get the script start time in the required format
 start_time = time.strftime('%Y-%m-%d-%H-%M')
 
 # Read the list of stocks from the file stocks.txt
-#stocks = pd.read_csv('stocks.txt', header=None)
 stocks = pd.read_csv('stocks-bse.txt', header=None)
 stocks = stocks.squeeze()
 
@@ -22,53 +21,75 @@ monthly_stocks = []
 weekly_immediate_stocks = []
 monthly_immediate_stocks = []
 
+# Create an empty list to store the failed symbols
+failed_stocks = []
+
+# Define a function that takes a stock name and returns a tuple of the data, the signals, and the stock name
+def process_stock(stock):
+    try:
+        # Download the historical data from Yahoo Finance
+        data = yf.download(stock, period='3mo')
+        
+        # Calculate the daily condition
+        daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2])
+        # Assign the daily signal based on the condition
+        daily_signal = 'TF-long' if daily_condition else 'no-signal'
+        
+        # Calculate the weekly condition
+        weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
+        # Assign the weekly signal based on the condition
+        weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
+        
+        # Calculate the monthly condition
+        monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
+        # Assign the monthly signal based on the condition
+        monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
+        
+        # Calculate the weekly-immediate condition
+        weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
+        # Assign the weekly-immediate signal based on the condition
+        weekly_immediate_signal = 'TF-long' if weekly_immediate_condition else 'no-signal'
+        
+        # Calculate the monthly-immediate condition
+        monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
+        # Assign the monthly-immediate signal based on the condition
+        monthly_immediate_signal = 'TF-long' if monthly_immediate_condition else 'no-signal'
+        
+        # Return a tuple of the data, the signals, and the stock name
+        return (data, (daily_signal, weekly_signal, monthly_signal, weekly_immediate_signal, monthly_immediate_signal), stock)
+    except IndexError:
+        # Skip the symbol that causes the error and print a message
+        print(f'Skipping {stock} due to insufficient data')
+        # Add the symbol to the failed list
+        failed_stocks.append(stock)
+        return None
+
 # Loop through each stock in the list
 for stock in stocks:
-    # Download the historical data from Yahoo Finance
-    data = yf.download(stock, period='3mo')
-    
-    # Calculate the daily condition
-    daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2])
-    # Assign the daily signal based on the condition
-    daily_signal = 'TF-long' if daily_condition else 'no-signal'
-    # Append the stock name to the daily list if the signal is 'TF-long'
-    if daily_signal == 'TF-long':
-        daily_stocks.append(stock)
-    
-    # Calculate the weekly condition
-    weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
-    # Assign the weekly signal based on the condition
-    weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
-    # Append the stock name to the weekly list if the signal is 'TF-long'
-    if weekly_signal == 'TF-long':
-        weekly_stocks.append(stock)
-    
-    # Calculate the monthly condition
-    monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
-    # Assign the monthly signal based on the condition
-    monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
-    # Append the stock name to the monthly list if the signal is 'TF-long'
-    if monthly_signal == 'TF-long':
-        monthly_stocks.append(stock)
-    
-    # Calculate the weekly-immediate condition
-    weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
-    # Assign the weekly-immediate signal based on the condition
-    weekly_immediate_signal = 'TF-long' if weekly_immediate_condition else 'no-signal'
-    # Append the stock name to the weekly-immediate list if the signal is 'TF-long'
-    if weekly_immediate_signal == 'TF-long':
-        weekly_immediate_stocks.append(stock)
-    
-    # Calculate the monthly-immediate condition
-    monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
-    # Assign the monthly-immediate signal based on the condition
-    monthly_immediate_signal = 'TF-long' if monthly_immediate_condition else 'no-signal'
-    # Append the stock name to the monthly-immediate list if the signal is 'TF-long'
-    if monthly_immediate_signal == 'TF-long':
-        monthly_immediate_stocks.append(stock)
+    # Call the process_stock function and unpack the result
+    result = process_stock(stock)
+    # Skip the None values
+    if result is None:
+        continue
+    # Unpack the result
+    data, signals, stock = result
+    # Unpack the signals
+    daily_signal, weekly_signal, monthly_signal, weekly_immediate_signal, monthly_immediate_signal = signals
     
     # Append the results to the data frame
     results = pd.concat([results, pd.DataFrame({'Stock': stock, 'Daily': daily_signal, 'Weekly': weekly_signal, 'Monthly': monthly_signal, 'Weekly-Immediate': weekly_immediate_signal, 'Monthly-Immediate': monthly_immediate_signal}, index=[0])], ignore_index=True)
+    
+    # Append the stock name to the lists based on the signals
+    if daily_signal == 'TF-long':
+        daily_stocks.append(stock)
+    if weekly_signal == 'TF-long':
+        weekly_stocks.append(stock)
+    if monthly_signal == 'TF-long':
+        monthly_stocks.append(stock)
+    if weekly_immediate_signal == 'TF-long':
+        weekly_immediate_stocks.append(stock)
+    if monthly_immediate_signal == 'TF-long':
+        monthly_immediate_stocks.append(stock)
     
     # Print the output for each iteration
     print(f'Daily TF-long signal: {daily_signal}')
@@ -102,6 +123,11 @@ with open(os.path.join(folder_name, 'weekly_immediate_stocks.txt'), 'w') as f:
 
 with open(os.path.join(folder_name, 'monthly_immediate_stocks.txt'), 'w') as f:
     for stock in monthly_immediate_stocks:
+        f.write(stock + '\n')
+
+# Write the failed list to a file named as failed_stocks.txt in the dated folder
+with open(os.path.join(folder_name, 'failed_stocks.txt'), 'w') as f:
+    for stock in failed_stocks:
         f.write(stock + '\n')
 
 # Save the results to a single file named as results.csv in the dated folder

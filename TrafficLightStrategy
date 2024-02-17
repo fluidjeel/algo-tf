@@ -1,145 +1,108 @@
-import yfinance
-import datetime
-import sys
+# Import pandas and yfinance libraries
 import pandas as pd
-import argparse
+import yfinance as yf
 import time
-import calendar
+import os
 
-# Create an argument parser object
-parser = argparse.ArgumentParser(description='Analyze stock data and apply trading strategy')
+# Get the script start time in the required format
+start_time = time.strftime('%Y-%m-%d-%H-%M')
 
-# Add an optional argument named --timeframe
-parser.add_argument('--timeframe', choices=['daily', 'weekly', 'monthly', 'all', 'weekly-immediate', 'monthly-immediate'], default='all', help='The timeframe to analyze')
+# Read the list of stocks from the file stocks.txt
+#stocks = pd.read_csv('stocks.txt', header=None)
+stocks = pd.read_csv('stocks-bse.txt', header=None)
+stocks = stocks.squeeze()
 
-# Parse the arguments and store them in a variable
-args = parser.parse_args()
+# Create an empty data frame to store the results
+results = pd.DataFrame(columns=['Stock', 'Daily', 'Weekly', 'Monthly', 'Weekly-Immediate', 'Monthly-Immediate'])
 
-# Access the timeframe argument value
-timeframe = args.timeframe
+# Create empty lists to store the stocks based on the signals
+daily_stocks = []
+weekly_stocks = []
+monthly_stocks = []
+weekly_immediate_stocks = []
+monthly_immediate_stocks = []
 
-# Read the stock symbols from stocks.txt file
-with open ('stocks.txt', 'r') as f:
-    stocks = f.read ().splitlines ()
+# Loop through each stock in the list
+for stock in stocks:
+    # Download the historical data from Yahoo Finance
+    data = yf.download(stock, period='3mo')
+    
+    # Calculate the daily condition
+    daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2])
+    # Assign the daily signal based on the condition
+    daily_signal = 'TF-long' if daily_condition else 'no-signal'
+    # Append the stock name to the daily list if the signal is 'TF-long'
+    if daily_signal == 'TF-long':
+        daily_stocks.append(stock)
+    
+    # Calculate the weekly condition
+    weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
+    # Assign the weekly signal based on the condition
+    weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
+    # Append the stock name to the weekly list if the signal is 'TF-long'
+    if weekly_signal == 'TF-long':
+        weekly_stocks.append(stock)
+    
+    # Calculate the monthly condition
+    monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
+    # Assign the monthly signal based on the condition
+    monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
+    # Append the stock name to the monthly list if the signal is 'TF-long'
+    if monthly_signal == 'TF-long':
+        monthly_stocks.append(stock)
+    
+    # Calculate the weekly-immediate condition
+    weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
+    # Assign the weekly-immediate signal based on the condition
+    weekly_immediate_signal = 'TF-long' if weekly_immediate_condition else 'no-signal'
+    # Append the stock name to the weekly-immediate list if the signal is 'TF-long'
+    if weekly_immediate_signal == 'TF-long':
+        weekly_immediate_stocks.append(stock)
+    
+    # Calculate the monthly-immediate condition
+    monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
+    # Assign the monthly-immediate signal based on the condition
+    monthly_immediate_signal = 'TF-long' if monthly_immediate_condition else 'no-signal'
+    # Append the stock name to the monthly-immediate list if the signal is 'TF-long'
+    if monthly_immediate_signal == 'TF-long':
+        monthly_immediate_stocks.append(stock)
+    
+    # Append the results to the data frame
+    results = pd.concat([results, pd.DataFrame({'Stock': stock, 'Daily': daily_signal, 'Weekly': weekly_signal, 'Monthly': monthly_signal, 'Weekly-Immediate': weekly_immediate_signal, 'Monthly-Immediate': monthly_immediate_signal}, index=[0])], ignore_index=True)
+    
+    # Print the output for each iteration
+    print(f'Daily TF-long signal: {daily_signal}')
+    print(f'Weekly TF-long signal: {weekly_signal}')
+    print(f'Monthly TF-long signal: {monthly_signal}')
+    print(f'Weekly-immediate TF-long signal: {weekly_immediate_signal}')
+    print(f'Monthly-immediate TF-long signal: {monthly_immediate_signal}')
+    print(f'Stock name: {stock}')
+    print()
 
-# Create an empty list to store the output data
-output_data = []
+# Create the folder in the current working directory using the script start time
+folder_name = start_time
+os.mkdir(folder_name)
 
-# Loop through each stock symbol and apply the trading strategy
-for ticker in stocks:
-    # Get the historical data for different timeframes
-    daily_data = yfinance.download (ticker, period='1y')
-    weekly_data = yfinance.download (ticker, period='1y', interval='1wk')
-    monthly_data = yfinance.download (ticker, period='1y', interval='1mo')
+# Write the lists to different text files in the dated folder
+with open(os.path.join(folder_name, 'daily_stocks.txt'), 'w') as f:
+    for stock in daily_stocks:
+        f.write(stock + '\n')
 
-    # Get the current date
-    today = datetime.date.today()
+with open(os.path.join(folder_name, 'weekly_stocks.txt'), 'w') as f:
+    for stock in weekly_stocks:
+        f.write(stock + '\n')
 
-    # Get the weekday number of the current date (0 is Monday, 6 is Sunday)
-    weekday = today.weekday()
+with open(os.path.join(folder_name, 'monthly_stocks.txt'), 'w') as f:
+    for stock in monthly_stocks:
+        f.write(stock + '\n')
 
-    # Define the week start and end days (5 is Saturday, 4 is Friday)
-    week_start = 5
-    week_end = 4
+with open(os.path.join(folder_name, 'weekly_immediate_stocks.txt'), 'w') as f:
+    for stock in weekly_immediate_stocks:
+        f.write(stock + '\n')
 
-    # Calculate the number of days to subtract from the current date to get the start and end dates of the previous 2 weeks
-    start_delta = datetime.timedelta(days=(weekday - week_start) % 7 + 7) # Add 7 days to go back one week
-    end_delta = datetime.timedelta(days=(weekday - week_end) % 7 + 1) # Add 1 day to include the end day
+with open(os.path.join(folder_name, 'monthly_immediate_stocks.txt'), 'w') as f:
+    for stock in monthly_immediate_stocks:
+        f.write(stock + '\n')
 
-    # Get the start and end dates of the previous 2 weeks
-    start_date = today - start_delta
-    end_date = today - end_delta
-
-    # Get the last 2 weeks data for weekly-immediate timeframe
-    weekly_immediate_data = yfinance.download (ticker, start=start_date, end=end_date)
-
-    # Get the year and month of the current date
-    year = today.year
-    month = today.month
-
-    # Calculate the year and month of the previous 2 months
-    prev_month = month - 1
-    prev_year = year
-    if prev_month == 0: # If the previous month is December of the previous year
-        prev_month = 12
-        prev_year = year - 1
-    prev_prev_month = prev_month - 1
-    prev_prev_year = prev_year
-    if prev_prev_month == 0: # If the month before previous month is December of the previous year
-        prev_prev_month = 12
-        prev_prev_year = prev_year - 1
-
-    # Get the start and end dates of the previous 2 months
-    start_date = datetime.date(prev_prev_year, prev_prev_month, 1) # The first day of the month before previous month
-    end_date = datetime.date(prev_year, prev_month, calendar.monthrange(prev_year, prev_month)[1]) # The last day of the previous month
-
-    # Get the last 2 months data for monthly-immediate timeframe
-    monthly_immediate_data = yfinance.download(ticker, start=start_date, end=end_date)
-
-    # Select the last 3 rows of each dataframe
-    daily_data = daily_data.tail(3)
-    weekly_data = weekly_data.tail(3)
-    monthly_data = monthly_data.tail(3)
-    weekly_immediate_data = weekly_immediate_data.tail(3)
-    monthly_immediate_data = monthly_immediate_data.tail(2)
-
-    # Calculate the TF-long signal for each timeframe
-    # The TF-long signal is True if the following conditions are met:
-    # - The open price of 2 days ago is higher than the close price of 2 days ago
-    # - The open price of yesterday is lower than the close price of yesterday
-    # - The open price of 2 days ago is lower than the close price of today
-    daily_signal = (daily_data.iloc [-3] ['Open'] > daily_data.iloc [-3] ['Close']) and \
-                   (daily_data.iloc [-2] ['Open'] < daily_data.iloc [-2] ['Close']) and \
-                   (daily_data.iloc [-3] ['Open'] < daily_data.iloc [-1] ['Close'])
-    weekly_signal = (weekly_data.iloc [-3] ['Open'] > weekly_data.iloc [-3] ['Close']) and \
-                    (weekly_data.iloc [-2] ['Open'] < weekly_data.iloc [-2] ['Close']) and \
-                    (weekly_data.iloc [-3] ['Open'] < weekly_data.iloc [-1] ['Close'])
-    monthly_signal = (monthly_data.iloc [-3] ['Open'] > monthly_data.iloc [-3] ['Close']) and \
-                     (monthly_data.iloc [-2] ['Open'] < monthly_data.iloc [-2] ['Close']) and \
-                     (monthly_data.iloc [-3] ['Open'] < monthly_data.iloc [-1] ['Close'])
-    # The TF-long signal for weekly-immediate is True if the following conditions are met:
-    # - The current week's close price is higher than the previous week's open price
-    # - The previous week's close price is lower than the previous week's open price
-    weekly_immediate_signal = (weekly_immediate_data.iloc[-1]['Close'] > weekly_immediate_data.iloc[-2]['Open']) and \
-                              (weekly_immediate_data.iloc[-2]['Close'] < weekly_immediate_data.iloc[-2]['Open'])
-    # The TF-long signal for monthly-immediate is True if the following conditions are met:
-    # - The last month's close price is higher than the month before previous month's open price
-    # - The month before previous month's close price is lower than the month before previous month's open price
-    monthly_immediate_signal = (monthly_immediate_data.iloc[-1]['Close'] > monthly_immediate_data.iloc[-2]['Open']) and \
-                               (monthly_immediate_data.iloc[-2]['Close'] < monthly_immediate_data.iloc[-2]['Open'])
-
-    # Filter the data based on the timeframe
-    if timeframe == 'daily':
-        filtered_data = daily_data
-        filtered_signal = daily_signal
-    elif timeframe == 'weekly':
-        filtered_data = weekly_data
-        filtered_signal = weekly_signal
-    elif timeframe == 'monthly':
-        filtered_data = monthly_data
-        filtered_signal = monthly_signal
-    elif timeframe == 'all':
-        filtered_data = pd.concat([daily_data, weekly_data, monthly_data, weekly_immediate_data, monthly_immediate_data]) # Concatenate all dataframes
-        filtered_signal = None # No single signal for all timeframes
-    elif timeframe == 'weekly-immediate':
-        filtered_data = weekly_immediate_data
-        filtered_signal = weekly_immediate_signal
-    elif timeframe == 'monthly-immediate':
-        filtered_data = monthly_immediate_data
-        filtered_signal = monthly_immediate_signal
-    else:
-        print('Invalid timeframe')
-        sys.exit()
-
-    # Append a list containing the stock name and the TF-long status for each timeframe to the output data list
-    output_data.append([ticker, daily_signal, weekly_signal, monthly_signal, weekly_immediate_signal, monthly_immediate_signal])
-
-    # Print the TF-long signal for each timeframe
-    print ('Daily TF-long signal:', daily_signal)
-    print ('Weekly TF-long signal:', weekly_signal)
-    print ('Monthly TF-long signal:', monthly_signal)
-    print ('Weekly-immediate TF-long signal:', weekly_immediate_signal)
-    print ('Monthly-immediate TF-long signal:', monthly_immediate_signal)
-
-    # Print the stock name
-    print('Stock name:', ticker) # Line 113
+# Save the results to a single file named as results.csv in the dated folder
+results.to_csv(os.path.join(folder_name, 'results.csv'), index=False)

@@ -6,6 +6,8 @@ import time
 
 import os
 import shutil
+import datetime
+
 
 def remove_directory_recursively(directory_path):
     try:
@@ -24,7 +26,15 @@ start_time = time.strftime('%Y-%m-%d-%H-%M')
 
 # Create a list of input files and a list of output folders
 input_files = ['stocks.txt', 'stocks-bse.txt']
+# Get the current date and month as strings
+date = datetime.datetime.now ().strftime ("%d")
+month = datetime.datetime.now ().strftime ("%m")
+
+# Change the output_folders list
 output_folders = ['stocks-output', 'stocks-bse-output']
+output_folders = [folder + "-" + date + "-" + month for folder in output_folders]
+
+#output_folders = ['stocks-output', 'stocks-bse-output']
 
 # Define a function that takes an input file, an output folder, and returns a tuple of the data, the signals, and the stock name
 def process_stock(input_file, output_folder):

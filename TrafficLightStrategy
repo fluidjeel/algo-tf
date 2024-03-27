@@ -8,7 +8,7 @@ import time
 start_time = time.strftime('%Y-%m-%d-%H-%M')
 
 # Read the list of stocks from the file stocks.txt
-stocks = pd.read_csv('stocks-bse.txt', header=None)
+stocks = pd.read_csv('stocks-nifty100.txt', header=None)
 stocks = stocks.squeeze()
 
 # Create an empty data frame to store the results
@@ -31,27 +31,27 @@ def process_stock(stock):
         data = yf.download(stock, period='3mo')
         
         # Calculate the daily condition
-        daily_condition = (data['Close'].iloc[-1] > data['Open'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2])
+        daily_condition = (data['Close'].iloc[-1] > data['High'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2]) and (data['Close'].iloc[-1] > data['High'].iloc[-2])
         # Assign the daily signal based on the condition
         daily_signal = 'TF-long' if daily_condition else 'no-signal'
         
         # Calculate the weekly condition
-        weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
+        weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2]) and (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-2])
         # Assign the weekly signal based on the condition
         weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
         
         # Calculate the monthly condition
-        monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
+        monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2]) and (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-2])
         # Assign the monthly signal based on the condition
         monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
         
         # Calculate the weekly-immediate condition
-        weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['Open'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
+        weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
         # Assign the weekly-immediate signal based on the condition
         weekly_immediate_signal = 'TF-long' if weekly_immediate_condition else 'no-signal'
         
         # Calculate the monthly-immediate condition
-        monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['Open'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
+        monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
         # Assign the monthly-immediate signal based on the condition
         monthly_immediate_signal = 'TF-long' if monthly_immediate_condition else 'no-signal'
         

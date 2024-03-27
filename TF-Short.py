@@ -31,29 +31,29 @@ def process_stock(stock):
         data = yf.download(stock, period='3mo')
         
         # Calculate the daily condition
-        daily_condition = (data['Close'].iloc[-1] > data['High'].iloc[-3]) and (data['Open'].iloc[-3] > data['Close'].iloc[-3]) and (data['Open'].iloc[-2] < data['Close'].iloc[-2]) and (data['Close'].iloc[-1] > data['High'].iloc[-2])
+        daily_condition = (data['Close'].iloc[-1] < data['Low'].iloc[-3]) and (data['Open'].iloc[-3] < data['Close'].iloc[-3]) and (data['Open'].iloc[-2] > data['Close'].iloc[-2]) and (data['Close'].iloc[-1] < data['Low'].iloc[-2])
         # Assign the daily signal based on the condition
-        daily_signal = 'TF-long' if daily_condition else 'no-signal'
+        daily_signal = 'TF-short' if daily_condition else 'no-signal'
         
         # Calculate the weekly condition
-        weekly_condition = (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] > data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2]) and (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-2])
+        weekly_condition = (data['Close'].resample('W').last().iloc[-1] < data['Low'].resample('W').first().iloc[-3]) and (data['Open'].resample('W').first().iloc[-3] < data['Close'].resample('W').last().iloc[-3]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2]) and (data['Close'].resample('W').last().iloc[-1] < data['Low'].resample('W').first().iloc[-2])
         # Assign the weekly signal based on the condition
-        weekly_signal = 'TF-long' if weekly_condition else 'no-signal'
+        weekly_signal = 'TF-short' if weekly_condition else 'no-signal'
         
         # Calculate the monthly condition
-        monthly_condition = (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] > data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2]) and (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-2])
+        monthly_condition = (data['Close'].resample('M').last().iloc[-1] < data['Low'].resample('M').first().iloc[-3]) and (data['Open'].resample('M').first().iloc[-3] < data['Close'].resample('M').last().iloc[-3]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2]) and (data['Close'].resample('M').last().iloc[-1] < data['Low'].resample('M').first().iloc[-2])
         # Assign the monthly signal based on the condition
-        monthly_signal = 'TF-long' if monthly_condition else 'no-signal'
+        monthly_signal = 'TF-short' if monthly_condition else 'no-signal'
         
         # Calculate the weekly-immediate condition
-        weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] > data['High'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] > data['Close'].resample('W').last().iloc[-2])
+        weekly_immediate_condition = (data['Close'].resample('W').last().iloc[-1] < data['Low'].resample('W').first().iloc[-2]) and (data['Open'].resample('W').first().iloc[-2] < data['Close'].resample('W').last().iloc[-2])
         # Assign the weekly-immediate signal based on the condition
-        weekly_immediate_signal = 'TF-long' if weekly_immediate_condition else 'no-signal'
+        weekly_immediate_signal = 'TF-short' if weekly_immediate_condition else 'no-signal'
         
         # Calculate the monthly-immediate condition
-        monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] > data['High'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] > data['Close'].resample('M').last().iloc[-2])
+        monthly_immediate_condition = (data['Close'].resample('M').last().iloc[-1] < data['Low'].resample('M').first().iloc[-2]) and (data['Open'].resample('M').first().iloc[-2] < data['Close'].resample('M').last().iloc[-2])
         # Assign the monthly-immediate signal based on the condition
-        monthly_immediate_signal = 'TF-long' if monthly_immediate_condition else 'no-signal'
+        monthly_immediate_signal = 'TF-short' if monthly_immediate_condition else 'no-signal'
         
         # Return a tuple of the data, the signals, and the stock name
         return (data, (daily_signal, weekly_signal, monthly_signal, weekly_immediate_signal, monthly_immediate_signal), stock)
@@ -80,28 +80,28 @@ for stock in stocks:
     results = pd.concat([results, pd.DataFrame({'Stock': stock, 'Daily': daily_signal, 'Weekly': weekly_signal, 'Monthly': monthly_signal, 'Weekly-Immediate': weekly_immediate_signal, 'Monthly-Immediate': monthly_immediate_signal}, index=[0])], ignore_index=True)
     
     # Append the stock name to the lists based on the signals
-    if daily_signal == 'TF-long':
+    if daily_signal == 'TF-short':
         daily_stocks.append(stock)
-    if weekly_signal == 'TF-long':
+    if weekly_signal == 'TF-short':
         weekly_stocks.append(stock)
-    if monthly_signal == 'TF-long':
+    if monthly_signal == 'TF-short':
         monthly_stocks.append(stock)
-    if weekly_immediate_signal == 'TF-long':
+    if weekly_immediate_signal == 'TF-short':
         weekly_immediate_stocks.append(stock)
-    if monthly_immediate_signal == 'TF-long':
+    if monthly_immediate_signal == 'TF-short':
         monthly_immediate_stocks.append(stock)
     
     # Print the output for each iteration
-    print(f'Daily TF-long signal: {daily_signal}')
-    print(f'Weekly TF-long signal: {weekly_signal}')
-    print(f'Monthly TF-long signal: {monthly_signal}')
-    print(f'Weekly-immediate TF-long signal: {weekly_immediate_signal}')
-    print(f'Monthly-immediate TF-long signal: {monthly_immediate_signal}')
+    print(f'Daily TF-short signal: {daily_signal}')
+    print(f'Weekly TF-short signal: {weekly_signal}')
+    print(f'Monthly TF-short signal: {monthly_signal}')
+    print(f'Weekly-immediate TF-short signal: {weekly_immediate_signal}')
+    print(f'Monthly-immediate TF-short signal: {monthly_immediate_signal}')
     print(f'Stock name: {stock}')
     print()
 
 # Create the folder in the current working directory using the script start time
-folder_name = "long-" + start_time
+folder_name = "short-" + start_time
 os.mkdir(folder_name)
 
 # Write the lists to different text files in the dated folder
